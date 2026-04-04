@@ -1,5 +1,5 @@
-import { App, ButtonComponent, Modal, Notice, Setting } from "obsidian";
-import WriteFreelyPlugin from "./main";
+import { type App, ButtonComponent, Modal, Notice, Setting } from "obsidian";
+import type WriteFreelyPlugin from "./main";
 
 export class LoginModal extends Modal {
 	private readonly plugin: WriteFreelyPlugin;
@@ -15,30 +15,28 @@ export class LoginModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: "Sign in to WriteFreely" });
+		contentEl.createEl("h2", { text: "Sign in" });
 		contentEl.createEl("p", {
-			text: "Your access token is stored in Obsidian's secret storage after login."
+			text: "Your access token is stored in Obsidian's secret storage after login.",
 		});
 
-		new Setting(contentEl)
-			.setName("Username")
-			.addText((text) => text
-				.setPlaceholder("matt")
-				.onChange((value) => {
-					this.alias = value.trim();
-				}));
+		new Setting(contentEl).setName("Username").addText((text) =>
+			text.setPlaceholder("Username").onChange((value) => {
+				this.alias = value.trim();
+			}),
+		);
 
-		new Setting(contentEl)
-			.setName("Password")
-			.addText((text) => {
-				text.setPlaceholder("Password");
-				text.inputEl.type = "password";
-				text.onChange((value: string) => {
-					this.password = value;
-				});
+		new Setting(contentEl).setName("Password").addText((text) => {
+			text.setPlaceholder("Password");
+			text.inputEl.type = "password";
+			text.onChange((value: string) => {
+				this.password = value;
 			});
+		});
 
-		const footer = contentEl.createDiv({ cls: "writefreely-modal-actions" });
+		const footer = contentEl.createDiv({
+			cls: "writefreely-modal-actions",
+		});
 		new ButtonComponent(footer)
 			.setButtonText("Cancel")
 			.onClick(() => this.close());
@@ -56,7 +54,7 @@ export class LoginModal extends Modal {
 
 	private async submit(): Promise<void> {
 		if (!this.alias || !this.password) {
-			new Notice("Enter both your WriteFreely username and password.");
+			new Notice("Enter both your username and password.");
 			return;
 		}
 
@@ -64,7 +62,9 @@ export class LoginModal extends Modal {
 			await this.plugin.logIn(this.alias, this.password);
 			this.close();
 		} catch (error) {
-			new Notice(error instanceof Error ? error.message : "Sign-in failed.");
+			new Notice(
+				error instanceof Error ? error.message : "Sign-in failed.",
+			);
 		}
 	}
 }
@@ -75,7 +75,10 @@ export class ConfirmModal extends Modal {
 	private readonly confirmLabel: string;
 	private resolver: ((value: boolean) => void) | null = null;
 
-	constructor(app: App, options: { title: string; description: string; confirmLabel: string }) {
+	constructor(
+		app: App,
+		options: { title: string; description: string; confirmLabel: string },
+	) {
 		super(app);
 		this.titleText = options.title;
 		this.description = options.description;
@@ -84,7 +87,7 @@ export class ConfirmModal extends Modal {
 
 	static async open(
 		app: App,
-		options: { title: string; description: string; confirmLabel: string }
+		options: { title: string; description: string; confirmLabel: string },
 	): Promise<boolean> {
 		return await new Promise<boolean>((resolve) => {
 			const modal = new ConfirmModal(app, options);
@@ -100,7 +103,9 @@ export class ConfirmModal extends Modal {
 		contentEl.createEl("h2", { text: this.titleText });
 		contentEl.createEl("p", { text: this.description });
 
-		const footer = contentEl.createDiv({ cls: "writefreely-modal-actions" });
+		const footer = contentEl.createDiv({
+			cls: "writefreely-modal-actions",
+		});
 		new ButtonComponent(footer)
 			.setButtonText("Cancel")
 			.onClick(() => this.resolve(false));

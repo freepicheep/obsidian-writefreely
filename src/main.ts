@@ -1,11 +1,22 @@
-import { App, MarkdownView, Notice, Plugin, TFile } from "obsidian";
+import { type App, MarkdownView, Notice, Plugin, type TFile } from "obsidian";
 import { WriteFreelyStatusController } from "./status";
 import { registerWriteFreelyCommands } from "./commands";
 import { ConfirmModal, LoginModal } from "./ui";
-import { DEFAULT_SETTINGS, WriteFreelySettingTab, WriteFreelySettings } from "./settings";
-import { getWriteFreelyMetadata, upsertWriteFreelyFrontmatter } from "./frontmatter";
+import {
+	DEFAULT_SETTINGS,
+	WriteFreelySettingTab,
+	type WriteFreelySettings,
+} from "./settings";
+import {
+	getWriteFreelyMetadata,
+	upsertWriteFreelyFrontmatter,
+} from "./frontmatter";
 import { WriteFreelyClient } from "./writefreely/client";
-import { NotePublishResult, WriteFreelyPost, WriteFreelyStatus } from "./types";
+import type {
+	NotePublishResult,
+	WriteFreelyPost,
+	WriteFreelyStatus,
+} from "./types";
 
 const ACCESS_TOKEN_KEY = "obsidian-writefreely-access-token";
 
@@ -40,12 +51,16 @@ export default class WriteFreelyPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<WriteFreelySettings>);
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			(await this.loadData()) as Partial<WriteFreelySettings>,
+		);
 	}
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
-		this.statusController?.refresh();
+		await this.statusController?.refresh();
 		this.refreshSettingsUi();
 	}
 
@@ -73,11 +88,16 @@ export default class WriteFreelyPlugin extends Plugin {
 	async logIn(alias: string, password: string): Promise<void> {
 		const baseUrl = this.getApiBaseUrl();
 		if (!baseUrl) {
-			throw new Error("Set your WriteFreely server URL in settings before signing in.");
+			throw new Error(
+				"Set your WriteFreely server URL in settings before signing in.",
+			);
 		}
 
 		const response = await this.client.logIn(baseUrl, alias, password);
-		this.getSecretStorage().setSecret(ACCESS_TOKEN_KEY, response.access_token);
+		this.getSecretStorage().setSecret(
+			ACCESS_TOKEN_KEY,
+			response.access_token,
+		);
 
 		this.settings.username = response.user.username;
 		await this.refreshCollections();
@@ -101,21 +121,28 @@ export default class WriteFreelyPlugin extends Plugin {
 		this.settings.username = "";
 		this.settings.collections = [];
 		await this.saveSettings();
+		// eslint-disable-next-line obsidianmd/ui/sentence-case
 		new Notice("Signed out of WriteFreely.");
 	}
 
 	async refreshCollections(): Promise<void> {
 		const token = await this.getRequiredAccessToken();
-		const collections = await this.client.getCollections(this.getApiBaseUrl(), token);
+		const collections = await this.client.getCollections(
+			this.getApiBaseUrl(),
+			token,
+		);
 		this.settings.collections = collections.map((collection) => ({
 			alias: collection.alias,
 			title: collection.title,
-			url: collection.url
+			url: collection.url,
 		}));
 
 		if (
 			this.settings.defaultCollection &&
-			!this.settings.collections.some((collection) => collection.alias === this.settings.defaultCollection)
+			!this.settings.collections.some(
+				(collection) =>
+					collection.alias === this.settings.defaultCollection,
+			)
 		) {
 			this.settings.defaultCollection = "";
 		}
@@ -123,7 +150,9 @@ export default class WriteFreelyPlugin extends Plugin {
 
 	openLoginModal(): void {
 		if (!this.hasSecretStorage()) {
-			new Notice("Obsidian secret storage is not available in this app version.");
+			new Notice(
+				"Obsidian secret storage is not available in this app version.",
+			);
 			return;
 		}
 
@@ -177,7 +206,9 @@ export default class WriteFreelyPlugin extends Plugin {
 
 	async publishNote(file: TFile): Promise<void> {
 		const result = await this.upsertRemotePost(file, "published");
-		const destination = result.metadata.wf_collection ? ` to ${result.metadata.wf_collection}` : "";
+		const destination = result.metadata.wf_collection
+			? ` to ${result.metadata.wf_collection}`
+			: "";
 		new Notice(`Published "${file.basename}"${destination}.`);
 	}
 
@@ -189,24 +220,30 @@ export default class WriteFreelyPlugin extends Plugin {
 	async moveNoteToDrafts(file: TFile): Promise<void> {
 		const metadata = getWriteFreelyMetadata(this.app, file, this.settings);
 		if (!metadata.wf_post_id) {
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			new Notice("This note has not been published to WriteFreely yet.");
 			return;
 		}
 
 		const token = await this.getRequiredAccessToken();
-		await this.client.unpublishPost(this.getApiBaseUrl(), metadata.wf_post_id, token);
+		await this.client.unpublishPost(
+			this.getApiBaseUrl(),
+			metadata.wf_post_id,
+			token,
+		);
 		await upsertWriteFreelyFrontmatter(this.app, file, {
 			wf_status: "draft",
-			wf_published_at: null
+			wf_published_at: null,
 		});
 
-		this.statusController?.refresh();
+		await this.statusController?.refresh();
 		new Notice(`Moved "${file.basename}" back to drafts.`);
 	}
 
 	async deleteRemotePost(file: TFile): Promise<void> {
 		const metadata = getWriteFreelyMetadata(this.app, file, this.settings);
 		if (!metadata.wf_post_id) {
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			new Notice("This note does not have a remote WriteFreely post.");
 			return;
 		}
@@ -214,107 +251,163 @@ export default class WriteFreelyPlugin extends Plugin {
 		const confirmed = await ConfirmModal.open(this.app, {
 			title: "Delete remote post?",
 			description: `Delete the WriteFreely post linked to "${file.basename}"? The local note will stay in your vault.`,
-			confirmLabel: "Delete remote post"
+			confirmLabel: "Delete remote post",
 		});
 		if (!confirmed) {
 			return;
 		}
 
 		const token = await this.getRequiredAccessToken();
-		await this.client.deletePost(this.getApiBaseUrl(), metadata.wf_post_id, token);
+		await this.client.deletePost(
+			this.getApiBaseUrl(),
+			metadata.wf_post_id,
+			token,
+		);
 		await upsertWriteFreelyFrontmatter(this.app, file, {
 			wf_post_id: null,
 			wf_collection: null,
 			wf_status: null,
-			wf_published_at: null
+			wf_published_at: null,
 		});
 
-		this.statusController?.refresh();
-		new Notice(`Deleted the remote WriteFreely post for "${file.basename}".`);
+		await this.statusController?.refresh();
+		new Notice(
+			`Deleted the remote WriteFreely post for "${file.basename}".`,
+		);
 	}
 
 	async refreshStatus(): Promise<void> {
 		await this.statusController?.refresh();
 	}
 
-	private async upsertRemotePost(file: TFile, targetStatus: WriteFreelyStatus): Promise<NotePublishResult> {
+	private async upsertRemotePost(
+		file: TFile,
+		targetStatus: WriteFreelyStatus,
+	): Promise<NotePublishResult> {
 		const token = await this.getRequiredAccessToken();
 		const metadata = getWriteFreelyMetadata(this.app, file, this.settings);
 		const content = await this.app.vault.cachedRead(file);
 		const noteBody = stripYamlFrontmatter(content).trim();
 
 		if (!noteBody) {
-			throw new Error("The current note is empty after removing frontmatter.");
+			throw new Error(
+				"The current note is empty after removing frontmatter.",
+			);
 		}
 
 		const title = this.getNoteTitle(file);
-		const desiredCollection = metadata.wf_collection || this.settings.defaultCollection || "";
+		const desiredCollection =
+			metadata.wf_collection || this.settings.defaultCollection || "";
 		let post: WriteFreelyPost;
 		let finalStatus: WriteFreelyStatus = targetStatus;
 
 		if (!metadata.wf_post_id) {
 			if (targetStatus === "published") {
 				if (!desiredCollection) {
-					throw new Error("Set `wf_collection` in frontmatter or choose a default collection in settings before publishing.");
+					throw new Error(
+						"Set `wf_collection` in frontmatter or choose a default collection in settings before publishing.",
+					);
 				}
 
-				post = await this.client.createCollectionPost(this.getApiBaseUrl(), desiredCollection, {
-					body: noteBody,
-					title
-				}, token);
+				post = await this.client.createCollectionPost(
+					this.getApiBaseUrl(),
+					desiredCollection,
+					{
+						body: noteBody,
+						title,
+					},
+					token,
+				);
 			} else {
-				post = await this.client.createPost(this.getApiBaseUrl(), {
-					body: noteBody,
-					title
-				}, token);
+				post = await this.client.createPost(
+					this.getApiBaseUrl(),
+					{
+						body: noteBody,
+						title,
+					},
+					token,
+				);
 				finalStatus = "draft";
 			}
 		} else {
-			post = await this.client.updatePost(this.getApiBaseUrl(), metadata.wf_post_id, {
-				body: noteBody,
-				title
-			}, token);
+			post = await this.client.updatePost(
+				this.getApiBaseUrl(),
+				metadata.wf_post_id,
+				{
+					body: noteBody,
+					title,
+				},
+				token,
+			);
 
 			if (targetStatus === "published") {
 				if (!desiredCollection) {
 					if (metadata.wf_status !== "published") {
-						throw new Error("Set `wf_collection` in frontmatter or choose a default collection in settings before publishing.");
+						throw new Error(
+							"Set `wf_collection` in frontmatter or choose a default collection in settings before publishing.",
+						);
 					}
-				} else if (metadata.wf_status !== "published" || metadata.wf_collection !== desiredCollection) {
-					post = await this.client.movePostToCollection(this.getApiBaseUrl(), desiredCollection, metadata.wf_post_id, token);
+				} else if (
+					metadata.wf_status !== "published" ||
+					metadata.wf_collection !== desiredCollection
+				) {
+					post = await this.client.movePostToCollection(
+						this.getApiBaseUrl(),
+						desiredCollection,
+						metadata.wf_post_id,
+						token,
+					);
 				}
 			} else {
 				finalStatus = "draft";
 			}
 		}
 
-		const publishedCollection = post.collection?.alias ?? (desiredCollection || "");
-		const nextStatus = targetStatus === "published" ? "published" : finalStatus;
+		const publishedCollection =
+			post.collection?.alias ?? (desiredCollection || "");
+		const nextStatus =
+			targetStatus === "published" ? "published" : finalStatus;
 
 		await upsertWriteFreelyFrontmatter(this.app, file, {
 			wf_post_id: post.id,
-			wf_collection: publishedCollection || metadata.wf_collection || null,
+			wf_collection:
+				publishedCollection || metadata.wf_collection || null,
 			wf_status: nextStatus,
-			wf_published_at: nextStatus === "published" ? post.created ?? metadata.wf_published_at ?? new Date().toISOString() : null
+			wf_published_at:
+				nextStatus === "published"
+					? (post.created ??
+						metadata.wf_published_at ??
+						new Date().toISOString())
+					: null,
 		});
 
-		this.statusController?.refresh();
+		await this.statusController?.refresh();
 
 		return {
 			post,
 			metadata: {
 				...metadata,
 				wf_post_id: post.id,
-				wf_collection: publishedCollection || metadata.wf_collection || undefined,
+				wf_collection:
+					publishedCollection || metadata.wf_collection || undefined,
 				wf_status: nextStatus,
-				wf_published_at: nextStatus === "published" ? post.created ?? metadata.wf_published_at ?? new Date().toISOString() : undefined
-			}
+				wf_published_at:
+					nextStatus === "published"
+						? (post.created ??
+							metadata.wf_published_at ??
+							new Date().toISOString())
+						: undefined,
+			},
 		};
 	}
 
 	private getNoteTitle(file: TFile): string {
-		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-		const frontmatterTitle = typeof frontmatter?.title === "string" ? frontmatter.title.trim() : "";
+		const frontmatter =
+			this.app.metadataCache.getFileCache(file)?.frontmatter;
+		const frontmatterTitle =
+			typeof frontmatter?.title === "string"
+				? frontmatter.title.trim()
+				: "";
 		return frontmatterTitle || file.basename;
 	}
 
@@ -329,7 +422,9 @@ export default class WriteFreelyPlugin extends Plugin {
 	private getSecretStorage(): SecretStorageCompat {
 		const secretStorage = (this.app as AppWithSecretStorage).secretStorage;
 		if (!secretStorage) {
-			throw new Error("Obsidian secret storage is not available in this app version.");
+			throw new Error(
+				"Obsidian secret storage is not available in this app version.",
+			);
 		}
 		return secretStorage;
 	}

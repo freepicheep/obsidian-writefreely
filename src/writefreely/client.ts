@@ -1,5 +1,9 @@
 import { requestUrl } from "obsidian";
-import { WriteFreelyAuthResponse, WriteFreelyCollection, WriteFreelyPost } from "../types";
+import type {
+	WriteFreelyAuthResponse,
+	WriteFreelyCollection,
+	WriteFreelyPost,
+} from "../types";
 
 interface WriteFreelyEnvelope<T> {
 	code: number;
@@ -19,35 +23,54 @@ interface WriteFreelyCollectResponseItem {
 }
 
 export class WriteFreelyClient {
-	async logIn(baseUrl: string, alias: string, password: string): Promise<WriteFreelyAuthResponse> {
-		return await this.request<WriteFreelyAuthResponse>(baseUrl, "/auth/login", {
-			method: "POST",
-			body: {
-				alias,
-				pass: password
-			}
-		});
+	async logIn(
+		baseUrl: string,
+		alias: string,
+		password: string,
+	): Promise<WriteFreelyAuthResponse> {
+		return await this.request<WriteFreelyAuthResponse>(
+			baseUrl,
+			"/auth/login",
+			{
+				method: "POST",
+				body: {
+					alias,
+					pass: password,
+				},
+			},
+		);
 	}
 
 	async logOut(baseUrl: string, token: string): Promise<void> {
 		await this.request<void>(baseUrl, "/auth/me", {
 			method: "DELETE",
-			token
+			token,
 		});
 	}
 
-	async getCollections(baseUrl: string, token: string): Promise<WriteFreelyCollection[]> {
-		return await this.request<WriteFreelyCollection[]>(baseUrl, "/me/collections", {
-			method: "GET",
-			token
-		});
+	async getCollections(
+		baseUrl: string,
+		token: string,
+	): Promise<WriteFreelyCollection[]> {
+		return await this.request<WriteFreelyCollection[]>(
+			baseUrl,
+			"/me/collections",
+			{
+				method: "GET",
+				token,
+			},
+		);
 	}
 
-	async createPost(baseUrl: string, post: WriteFreelyPostRequest, token: string): Promise<WriteFreelyPost> {
+	async createPost(
+		baseUrl: string,
+		post: WriteFreelyPostRequest,
+		token: string,
+	): Promise<WriteFreelyPost> {
 		return await this.request<WriteFreelyPost>(baseUrl, "/posts", {
 			method: "POST",
 			token,
-			body: post
+			body: post,
 		});
 	}
 
@@ -55,36 +78,57 @@ export class WriteFreelyClient {
 		baseUrl: string,
 		collectionAlias: string,
 		post: WriteFreelyPostRequest,
-		token: string
+		token: string,
 	): Promise<WriteFreelyPost> {
-		return await this.request<WriteFreelyPost>(baseUrl, `/collections/${encodeURIComponent(collectionAlias)}/posts`, {
-			method: "POST",
-			token,
-			body: post
-		});
+		return await this.request<WriteFreelyPost>(
+			baseUrl,
+			`/collections/${encodeURIComponent(collectionAlias)}/posts`,
+			{
+				method: "POST",
+				token,
+				body: post,
+			},
+		);
 	}
 
-	async updatePost(baseUrl: string, postId: string, post: WriteFreelyPostRequest, token: string): Promise<WriteFreelyPost> {
-		return await this.request<WriteFreelyPost>(baseUrl, `/posts/${encodeURIComponent(postId)}`, {
-			method: "POST",
-			token,
-			body: post
-		});
+	async updatePost(
+		baseUrl: string,
+		postId: string,
+		post: WriteFreelyPostRequest,
+		token: string,
+	): Promise<WriteFreelyPost> {
+		return await this.request<WriteFreelyPost>(
+			baseUrl,
+			`/posts/${encodeURIComponent(postId)}`,
+			{
+				method: "POST",
+				token,
+				body: post,
+			},
+		);
 	}
 
-	async unpublishPost(baseUrl: string, postId: string, token: string): Promise<void> {
-		await this.request<WriteFreelyPost>(baseUrl, `/posts/${encodeURIComponent(postId)}`, {
-			method: "POST",
-			token,
-			body: { body: "" }
-		});
+	async unpublishPost(
+		baseUrl: string,
+		postId: string,
+		token: string,
+	): Promise<void> {
+		await this.request<WriteFreelyPost>(
+			baseUrl,
+			`/posts/${encodeURIComponent(postId)}`,
+			{
+				method: "POST",
+				token,
+				body: { body: "" },
+			},
+		);
 	}
 
 	async movePostToCollection(
 		baseUrl: string,
 		collectionAlias: string,
 		postId: string,
-		token: string
+		token: string,
 	): Promise<WriteFreelyPost> {
 		const results = await this.request<WriteFreelyCollectResponseItem[]>(
 			baseUrl,
@@ -92,26 +136,39 @@ export class WriteFreelyClient {
 			{
 				method: "POST",
 				token,
-				body: [{ id: postId }]
-			}
+				body: [{ id: postId }],
+			},
 		);
 		const result = results[0];
 		if (!result) {
-			throw new Error("WriteFreely returned an empty collection move response.");
+			throw new Error(
+				"WriteFreely returned an empty collection move response.",
+			);
 		}
 
 		if (result.code < 200 || result.code >= 300 || !result.post) {
-			throw new Error(result.error_msg || "WriteFreely could not move the post into the collection.");
+			throw new Error(
+				result.error_msg ||
+					"WriteFreely could not move the post into the collection.",
+			);
 		}
 
 		return result.post;
 	}
 
-	async deletePost(baseUrl: string, postId: string, token: string): Promise<void> {
-		await this.request<void>(baseUrl, `/posts/${encodeURIComponent(postId)}`, {
-			method: "DELETE",
-			token
-		});
+	async deletePost(
+		baseUrl: string,
+		postId: string,
+		token: string,
+	): Promise<void> {
+		await this.request<void>(
+			baseUrl,
+			`/posts/${encodeURIComponent(postId)}`,
+			{
+				method: "DELETE",
+				token,
+			},
+		);
 	}
 
 	private async request<T>(
@@ -121,7 +178,7 @@ export class WriteFreelyClient {
 			method: string;
 			token?: string;
 			body?: unknown;
-		}
+		},
 	): Promise<T> {
 		const url = `${baseUrl}/api${path}`;
 		const response = await requestUrl({
@@ -129,10 +186,12 @@ export class WriteFreelyClient {
 			method: options.method,
 			contentType: "application/json",
 			headers: {
-				...(options.token ? { Authorization: `Token ${options.token}` } : {})
+				...(options.token
+					? { Authorization: `Token ${options.token}` }
+					: {}),
 			},
 			body: options.body ? JSON.stringify(options.body) : undefined,
-			throw: false
+			throw: false,
 		});
 
 		if (!response.text) {
@@ -140,12 +199,19 @@ export class WriteFreelyClient {
 				return undefined as T;
 			}
 
-			throw new Error(`WriteFreely request failed with status ${response.status}.`);
+			throw new Error(
+				`WriteFreely request failed with status ${response.status}.`,
+			);
 		}
 
-		const json = response.json as WriteFreelyEnvelope<T> | { error_msg?: string; code?: number };
+		const json = response.json as
+			| WriteFreelyEnvelope<T>
+			| { error_msg?: string; code?: number };
 		if (response.status < 200 || response.status >= 300) {
-			throw new Error(json.error_msg || `WriteFreely request failed with status ${response.status}.`);
+			throw new Error(
+				json.error_msg ||
+					`WriteFreely request failed with status ${response.status}.`,
+			);
 		}
 
 		if ("data" in json) {

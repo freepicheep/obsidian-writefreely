@@ -1,5 +1,5 @@
-import { MarkdownView, Menu, Notice, TFile, setIcon } from "obsidian";
-import WriteFreelyPlugin from "./main";
+import { MarkdownView, Menu, Notice, type TFile, setIcon } from "obsidian";
+import type WriteFreelyPlugin from "./main";
 import { getWriteFreelyMetadata } from "./frontmatter";
 
 const ACTION_CLASS = "writefreely-view-action";
@@ -25,20 +25,28 @@ export class WriteFreelyStatusController {
 			this.statusBarItemEl = null;
 		}
 
-		this.plugin.registerEvent(this.plugin.app.workspace.on("file-open", () => {
-			void this.refresh();
-		}));
-		this.plugin.registerEvent(this.plugin.app.workspace.on("active-leaf-change", () => {
-			void this.refresh();
-		}));
-		this.plugin.registerEvent(this.plugin.app.metadataCache.on("changed", (file) => {
-			if (file.path === this.plugin.getActiveMarkdownFile()?.path) {
+		this.plugin.registerEvent(
+			this.plugin.app.workspace.on("file-open", () => {
 				void this.refresh();
-			}
-		}));
-		this.plugin.registerEvent(this.plugin.app.vault.on("rename", () => {
-			void this.refresh();
-		}));
+			}),
+		);
+		this.plugin.registerEvent(
+			this.plugin.app.workspace.on("active-leaf-change", () => {
+				void this.refresh();
+			}),
+		);
+		this.plugin.registerEvent(
+			this.plugin.app.metadataCache.on("changed", (file) => {
+				if (file.path === this.plugin.getActiveMarkdownFile()?.path) {
+					void this.refresh();
+				}
+			}),
+		);
+		this.plugin.registerEvent(
+			this.plugin.app.vault.on("rename", () => {
+				void this.refresh();
+			}),
+		);
 
 		void this.refresh();
 	}
@@ -49,7 +57,8 @@ export class WriteFreelyStatusController {
 	}
 
 	async refresh(): Promise<void> {
-		const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+		const view =
+			this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
 		const file = view?.file ?? null;
 		this.updateStatusBar(file);
 		this.updateViewAction(view, file);
@@ -65,16 +74,23 @@ export class WriteFreelyStatusController {
 		this.statusBarItemEl.toggleClass("is-hidden", file === null);
 	}
 
-	private updateViewAction(view: MarkdownView | null, file: TFile | null): void {
+	private updateViewAction(
+		view: MarkdownView | null,
+		file: TFile | null,
+	): void {
 		if (!view) {
 			return;
 		}
 
 		let button = this.actionButtons.get(view);
 		if (!button) {
-			button = view.addAction("square-pen", "WriteFreely", (event: MouseEvent) => {
-				void this.openMenu(event);
-			});
+			button = view.addAction(
+				"square-pen",
+				"WriteFreely",
+				(event: MouseEvent) => {
+					void this.openMenu(event);
+				},
+			);
 			button.addClass(ACTION_CLASS);
 			this.actionButtons.set(view, button);
 		}
@@ -92,72 +108,98 @@ export class WriteFreelyStatusController {
 		const token = await this.plugin.getAccessToken();
 
 		if (!file) {
-			menu.addItem((item) => item
-				.setTitle("Open a Markdown note")
-				.setIcon("file-text"));
+			menu.addItem((item) =>
+				item.setTitle("Open a Markdown note").setIcon("file-text"),
+			);
 			menu.showAtMouseEvent(event);
 			return;
 		}
 
 		if (!token) {
-			menu.addItem((item) => item
-				.setTitle("Sign in to WriteFreely")
-				.setIcon("log-in")
-				.onClick(() => this.plugin.openLoginModal()));
+			menu.addItem((item) =>
+				item
+					.setTitle("Sign in")
+					.setIcon("log-in")
+					.onClick(() => this.plugin.openLoginModal()),
+			);
 			menu.showAtMouseEvent(event);
 			return;
 		}
 
-		const metadata = getWriteFreelyMetadata(this.plugin.app, file, this.plugin.settings);
+		const metadata = getWriteFreelyMetadata(
+			this.plugin.app,
+			file,
+			this.plugin.settings,
+		);
 
-		menu.addItem((item) => item
-			.setTitle(metadata.wf_status === "published" ? "Update published post" : "Publish note")
-			.setIcon("send")
-			.onClick(() => {
-				void this.runAction(() => this.plugin.publishNote(file));
-			}));
+		menu.addItem((item) =>
+			item
+				.setTitle(
+					metadata.wf_status === "published"
+						? "Update published post"
+						: "Publish note",
+				)
+				.setIcon("send")
+				.onClick(() => {
+					void this.runAction(() => this.plugin.publishNote(file));
+				}),
+		);
 
-		menu.addItem((item) => item
-			.setTitle("Save draft")
-			.setIcon("file-pen")
-			.onClick(() => {
-				void this.runAction(() => this.plugin.saveDraft(file));
-			}));
+		menu.addItem((item) =>
+			item
+				.setTitle("Save draft")
+				.setIcon("file-pen")
+				.onClick(() => {
+					void this.runAction(() => this.plugin.saveDraft(file));
+				}),
+		);
 
 		if (metadata.wf_post_id && metadata.wf_status === "published") {
-			menu.addItem((item) => item
-				.setTitle("Move to drafts")
-				.setIcon("archive")
-				.onClick(() => {
-					void this.runAction(() => this.plugin.moveNoteToDrafts(file));
-				}));
+			menu.addItem((item) =>
+				item
+					.setTitle("Move to drafts")
+					.setIcon("archive")
+					.onClick(() => {
+						void this.runAction(() =>
+							this.plugin.moveNoteToDrafts(file),
+						);
+					}),
+			);
 		}
 
 		if (metadata.wf_post_id) {
-			menu.addItem((item) => item
-				.setTitle("Delete remote post")
-				.setIcon("trash-2")
-				.onClick(() => {
-					void this.runAction(() => this.plugin.deleteRemotePost(file));
-				}));
+			menu.addItem((item) =>
+				item
+					.setTitle("Delete remote post")
+					.setIcon("trash-2")
+					.onClick(() => {
+						void this.runAction(() =>
+							this.plugin.deleteRemotePost(file),
+						);
+					}),
+			);
 		}
 
 		menu.addSeparator();
-		menu.addItem((item) => item
-			.setTitle("Refresh collections")
-			.setIcon("refresh-cw")
-			.onClick(() => {
-				void this.runAction(async () => {
-					await this.plugin.refreshCollections();
-					await this.plugin.saveSettings();
-				});
-			}));
-		menu.addItem((item) => item
-			.setTitle("Sign out")
-			.setIcon("log-out")
-			.onClick(() => {
-				void this.runAction(() => this.plugin.logOut());
-			}));
+		menu.addItem((item) =>
+			item
+				.setTitle("Refresh collections")
+				.setIcon("refresh-cw")
+				.onClick(() => {
+					void this.runAction(async () => {
+						await this.plugin.refreshCollections();
+						await this.plugin.saveSettings();
+					});
+				}),
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Sign out")
+				.setIcon("log-out")
+				.onClick(() => {
+					void this.runAction(() => this.plugin.logOut());
+				}),
+		);
 
 		menu.showAtMouseEvent(event);
 	}
@@ -176,21 +218,29 @@ export class WriteFreelyStatusController {
 		return this.describeState(file).label;
 	}
 
-	private describeState(file: TFile | null): { icon: string; label: string; tooltip: string } {
+	private describeState(file: TFile | null): {
+		icon: string;
+		label: string;
+		tooltip: string;
+	} {
 		if (!file) {
 			return {
 				icon: "square-pen",
 				label: "No note",
-				tooltip: "Open a Markdown note to manage it in WriteFreely."
+				tooltip: "Open a Markdown note to manage it in WriteFreely.",
 			};
 		}
 
-		const metadata = getWriteFreelyMetadata(this.plugin.app, file, this.plugin.settings);
+		const metadata = getWriteFreelyMetadata(
+			this.plugin.app,
+			file,
+			this.plugin.settings,
+		);
 		if (!metadata.wf_post_id) {
 			return {
 				icon: "square-pen",
 				label: "Local",
-				tooltip: "This note has not been created on WriteFreely yet."
+				tooltip: "This note has not been created on WriteFreely yet.",
 			};
 		}
 
@@ -200,14 +250,14 @@ export class WriteFreelyStatusController {
 				label: "Published",
 				tooltip: metadata.wf_collection
 					? `Published to ${metadata.wf_collection}.`
-					: "Published on WriteFreely."
+					: "Published on WriteFreely.",
 			};
 		}
 
 		return {
 			icon: "file-pen",
 			label: "Draft",
-			tooltip: "Saved to WriteFreely as a draft."
+			tooltip: "Saved to WriteFreely as a draft.",
 		};
 	}
 }
