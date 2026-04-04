@@ -1,8 +1,27 @@
-/*
+.writefreely-view-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.writefreely-view-action::after {
+	content: attr(data-wf-label);
+	font-size: var(--font-ui-smaller);
+	line-height: 1;
+}
 
-If your plugin does not need CSS, delete this file.
+.writefreely-status-bar {
+	cursor: pointer;
+}
 
-*/
+.writefreely-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
+}
+
+.writefreely-settings-hint {
+	color: var(--text-muted);
+	margin-top: 0.75rem;
+}
