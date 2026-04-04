@@ -2,6 +2,9 @@
 
 This Obsidian plugin lets you publish and manage your posts on [WriteFreely](https://writefreely.org/). 
 
+![demo](https://github.com/user-attachments/assets/5dd427ff-410d-4087-8cb1-a0a455c03c81)
+
+
 ## Authentication
 
 You only need:
@@ -11,7 +14,7 @@ You only need:
 
 The plugin does not store your username or password: it stores the authentication token in Obsidian's new SecretStorage.
 
-## Usage 
+## Usage
 
 You can save your note as a draft, publish it to your collection, or remove it if you have already published it. You can use the available commands from the Command Palette or click on the WriteFreely items in the toolbar or statusbar. 
 
