@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-writefreely",
 	"name": "WriteFreely",
-	"version": "1.0.1",
+	"version": "1.1.0",
 	"minAppVersion": "1.11.4",
 	"description": "Publish and manage WriteFreely posts from Obsidian notes with frontmatter metadata.",
 	"author": "Friedrich Stoltzfus",
