@@ -27,6 +27,11 @@ interface SecretStorageCompat {
 	removeSecret?(key: string): void;
 }
 
+interface SaveSettingsOptions {
+	refreshStatus?: boolean;
+	refreshUi?: boolean;
+}
+
 export default class WriteFreelyPlugin extends Plugin {
 	settings: WriteFreelySettings;
 	readonly client = new WriteFreelyClient();
@@ -58,10 +63,15 @@ export default class WriteFreelyPlugin extends Plugin {
 		);
 	}
 
-	async saveSettings(): Promise<void> {
+	async saveSettings(options: SaveSettingsOptions = {}): Promise<void> {
+		const { refreshStatus = true, refreshUi = true } = options;
 		await this.saveData(this.settings);
-		await this.statusController?.refresh();
-		this.refreshSettingsUi();
+		if (refreshStatus) {
+			await this.statusController?.refresh();
+		}
+		if (refreshUi) {
+			this.refreshSettingsUi();
+		}
 	}
 
 	getApiBaseUrl(): string {

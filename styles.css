@@ -25,3 +25,15 @@
 	color: var(--text-muted);
 	margin-top: 0.75rem;
 }
+
+.setting-item.writefreely-server-url-setting .setting-item-control {
+	flex: 0 1 auto !important;
+	width: auto !important;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.setting-item.writefreely-server-url-setting .setting-item-control input {
+	max-width: 100%;
+	min-width: 16ch;
+}

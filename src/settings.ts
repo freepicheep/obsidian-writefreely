@@ -1,4 +1,10 @@
-import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
+import {
+	type App,
+	Notice,
+	PluginSettingTab,
+	Setting,
+	type TextComponent,
+} from "obsidian";
 import type WriteFreelyPlugin from "./main";
 
 export interface SavedWriteFreelyCollection {
@@ -23,56 +29,65 @@ export const DEFAULT_SETTINGS: WriteFreelySettings = {
 
 export class WriteFreelySettingTab extends PluginSettingTab {
 	plugin: WriteFreelyPlugin;
+	private serverUrlDraft: string | null = null;
 
 	constructor(app: App, plugin: WriteFreelyPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
+	override hide(): void {
+		super.hide();
+		void this.saveServerUrlDraft();
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		const isSignedIn = Boolean(this.plugin.settings.username);
+		const serverUrlValue =
+			this.serverUrlDraft ?? this.plugin.settings.serverUrl;
 
-		new Setting(containerEl)
+		 new Setting(containerEl)
+			.setClass("writefreely-server-url-setting")
 			.setName("Server address")
 			.setDesc("Base address for your publishing site.")
-			.addText((text) =>
+			.addText((text) => {
 				text
+					.setDisabled(isSignedIn)
 					.setPlaceholder("https://write.as")
-					.setValue(this.plugin.settings.serverUrl)
-					.onChange(async (value) => {
-						this.plugin.settings.serverUrl = value.trim();
-						await this.plugin.saveSettings();
-						this.display();
-					}),
-			);
+					.setValue(serverUrlValue)
+					.onChange((value) => {
+						this.serverUrlDraft = value;
+						this.updateServerUrlInputWidth(text, value);
+					});
+				this.updateServerUrlInputWidth(text, serverUrlValue);
+			});
 
 		new Setting(containerEl)
 			.setName("Account")
 			.setDesc(
 				!this.plugin.hasSecretStorage()
 					? "This Obsidian build does not expose secret storage, so sign-in is unavailable."
-					: this.plugin.settings.username
+					: isSignedIn
 						? `Signed in as ${this.plugin.settings.username}.`
 						: "Sign in to store your WriteFreely access token in Obsidian's secret storage.",
 			)
 			.addButton((button) =>
 				button
 					.setButtonText(
-						this.plugin.settings.username ? "Sign out" : "Sign in",
+						isSignedIn ? "Sign out" : "Sign in",
 					)
 					.setDisabled(!this.plugin.hasSecretStorage())
 					.onClick(async () => {
 						try {
-							if (
-								this.plugin.settings.username &&
-								(await this.plugin.hasAccessToken())
-							) {
+							if (isSignedIn && (await this.plugin.hasAccessToken())) {
 								await this.plugin.logOut();
 								this.display();
 								return;
 							}
 
+							await this.saveServerUrlDraft();
 							this.plugin.openLoginModal();
 						} catch (error) {
 							new Notice(
@@ -87,7 +102,7 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 				button
 					.setIcon("refresh-cw")
 					.setTooltip("Refresh collections")
-					.setDisabled(!this.plugin.settings.username)
+					.setDisabled(!isSignedIn)
 					.onClick(async () => {
 						await this.plugin.refreshCollections();
 						await this.plugin.saveSettings();
@@ -125,5 +140,31 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 				text: "No collections loaded yet. Sign in and refresh collections to choose a default blog.",
 			});
 		}
+	}
+
+	private async saveServerUrlDraft(): Promise<void> {
+		const nextServerUrl = (
+			this.serverUrlDraft ?? this.plugin.settings.serverUrl
+		).trim();
+		this.serverUrlDraft = nextServerUrl;
+
+		if (nextServerUrl === this.plugin.settings.serverUrl) {
+			return;
+		}
+
+		this.plugin.settings.serverUrl = nextServerUrl;
+		await this.plugin.saveSettings({
+			refreshStatus: false,
+			refreshUi: false,
+		});
+	}
+
+	private updateServerUrlInputWidth(
+		text: TextComponent,
+		value: string,
+	): void {
+		const displayValue = value.trim() || text.inputEl.placeholder;
+		const width = Math.max(text.inputEl.placeholder.length, displayValue.length + 1);
+		text.inputEl.style.width = `${width}ch`;
 	}
 }
