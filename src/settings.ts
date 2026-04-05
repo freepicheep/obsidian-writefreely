@@ -18,6 +18,7 @@ export interface WriteFreelySettings {
 	username: string;
 	defaultCollection: string;
 	collections: SavedWriteFreelyCollection[];
+	showToolbarAction: boolean;
 }
 
 export const DEFAULT_SETTINGS: WriteFreelySettings = {
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: WriteFreelySettings = {
 	username: "",
 	defaultCollection: "",
 	collections: [],
+	showToolbarAction: false,
 };
 
 export class WriteFreelySettingTab extends PluginSettingTab {
@@ -48,13 +50,12 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 		const serverUrlValue =
 			this.serverUrlDraft ?? this.plugin.settings.serverUrl;
 
-		 new Setting(containerEl)
+		new Setting(containerEl)
 			.setClass("writefreely-server-url-setting")
 			.setName("Server address")
 			.setDesc("Base address for your publishing site.")
 			.addText((text) => {
-				text
-					.setDisabled(isSignedIn)
+				text.setDisabled(isSignedIn)
 					.setPlaceholder("https://write.as")
 					.setValue(serverUrlValue)
 					.onChange((value) => {
@@ -75,13 +76,14 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 			)
 			.addButton((button) =>
 				button
-					.setButtonText(
-						isSignedIn ? "Sign out" : "Sign in",
-					)
+					.setButtonText(isSignedIn ? "Sign out" : "Sign in")
 					.setDisabled(!this.plugin.hasSecretStorage())
 					.onClick(async () => {
 						try {
-							if (isSignedIn && (await this.plugin.hasAccessToken())) {
+							if (
+								isSignedIn &&
+								(await this.plugin.hasAccessToken())
+							) {
 								await this.plugin.logOut();
 								this.display();
 								return;
@@ -107,6 +109,21 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 						await this.plugin.refreshCollections();
 						await this.plugin.saveSettings();
 						this.display();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Show note toolbar action")
+			.setDesc(
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				"Add the WriteFreely action to the note toolbar. The status bar item is always shown.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showToolbarAction)
+					.onChange(async (value) => {
+						this.plugin.settings.showToolbarAction = value;
+						await this.plugin.saveSettings();
 					}),
 			);
 
@@ -164,7 +181,10 @@ export class WriteFreelySettingTab extends PluginSettingTab {
 		value: string,
 	): void {
 		const displayValue = value.trim() || text.inputEl.placeholder;
-		const width = Math.max(text.inputEl.placeholder.length, displayValue.length + 1);
+		const width = Math.max(
+			text.inputEl.placeholder.length,
+			displayValue.length + 1,
+		);
 		text.inputEl.style.width = `${width}ch`;
 	}
 }

@@ -6,7 +6,7 @@ const ACTION_CLASS = "writefreely-view-action";
 
 export class WriteFreelyStatusController {
 	private readonly plugin: WriteFreelyPlugin;
-	private readonly actionButtons = new WeakMap<MarkdownView, HTMLElement>();
+	private readonly actionButtons = new Map<MarkdownView, HTMLElement>();
 	private statusBarItemEl: HTMLElement | null = null;
 
 	constructor(plugin: WriteFreelyPlugin) {
@@ -52,6 +52,7 @@ export class WriteFreelyStatusController {
 	}
 
 	onunload(): void {
+		this.clearViewActions();
 		this.statusBarItemEl?.detach();
 		this.statusBarItemEl = null;
 	}
@@ -61,7 +62,7 @@ export class WriteFreelyStatusController {
 			this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
 		const file = view?.file ?? null;
 		this.updateStatusBar(file);
-		this.updateViewAction(view, file);
+		this.updateViewActions();
 	}
 
 	private updateStatusBar(file: TFile | null): void {
@@ -71,14 +72,35 @@ export class WriteFreelyStatusController {
 
 		const label = this.getStatusLabel(file);
 		this.statusBarItemEl.setText(`WriteFreely: ${label}`);
-		this.statusBarItemEl.toggleClass("is-hidden", file === null);
 	}
 
-	private updateViewAction(
-		view: MarkdownView | null,
-		file: TFile | null,
-	): void {
-		if (!view) {
+	private updateViewActions(): void {
+		const leaves = this.plugin.app.workspace.getLeavesOfType("markdown");
+		const visibleViews = new Set<MarkdownView>();
+
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (!(view instanceof MarkdownView)) {
+				continue;
+			}
+
+			visibleViews.add(view);
+			this.updateViewAction(view, view.file ?? null);
+		}
+
+		for (const [view, button] of this.actionButtons) {
+			if (visibleViews.has(view)) {
+				continue;
+			}
+
+			button.remove();
+			this.actionButtons.delete(view);
+		}
+	}
+
+	private updateViewAction(view: MarkdownView, file: TFile | null): void {
+		if (!this.plugin.settings.showToolbarAction) {
+			this.removeViewAction(view);
 			return;
 		}
 
@@ -100,6 +122,23 @@ export class WriteFreelyStatusController {
 		button.setAttribute("aria-label", tooltip);
 		button.setAttribute("data-wf-label", label);
 		button.setAttribute("title", tooltip);
+	}
+
+	private removeViewAction(view: MarkdownView): void {
+		const button = this.actionButtons.get(view);
+		if (!button) {
+			return;
+		}
+
+		button.remove();
+		this.actionButtons.delete(view);
+	}
+
+	private clearViewActions(): void {
+		for (const button of this.actionButtons.values()) {
+			button.remove();
+		}
+		this.actionButtons.clear();
 	}
 
 	private async openMenu(event: MouseEvent): Promise<void> {
